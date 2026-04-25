@@ -19,7 +19,7 @@ def home_screen():
             font-weight: 600;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.5);
+            color: rgba(0,122,255,0.5);
             background: rgba(255,255,255,0.07);
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 100px;
