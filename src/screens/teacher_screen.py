@@ -7,9 +7,7 @@ from src.database.db import check_teacher_exists, teacher_login
 def teacher_screen():
     style_background_dashboard()
     style_base_layout()
-    if "teacher_data" in st.session_state:
-        teacher_dashboard()
-    elif "teacher_login_type" not in st.session_state:
+    if "teacher_login_type" not in st.session_state:
         st.session_state.teacher_login_type = "login"
 
     left_col, right_col = st.columns(2, vertical_alignment="center", gap="large")
@@ -46,18 +44,14 @@ def teacher_screen():
         _teacher_register_layout()
 
     footer_dashboard()
-
-def teacher_dashboard():
-    st.header(f"Welcome, {st.session_state.teacher_data['name']}!")
-    st.markdown("This is your teacher dashboard. You can manage your classes, take attendance, and view reports here.")
 def login_teacher(username: str, password: str):    
-    from src.database.db import teacher_login
     teacher_data = teacher_login(username, password)
     if teacher_data:
         st.session_state.teacher_data = teacher_data
         st.session_state.teacher_login_type = None
         st.session_state["user_role"] = "teacher"
         st.session_state.is_logged_in = True
+        st.session_state["login_type"] = "teacher_dashboard"
         return True
     return False
 def _teacher_login_layout():
