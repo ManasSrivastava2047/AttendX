@@ -2,7 +2,8 @@ import streamlit as st
 
 from src.components.footer import footer_dashboard
 from src.ui.base_layout import style_base_layout, style_background_dashboard
-
+from PIL import Image
+import numpy as np
 
 def student_screen():
     style_background_dashboard()
@@ -59,8 +60,7 @@ def student_screen():
     st.caption("Position your face in the center")
     face_photo = st.camera_input("Capture your face")
     if face_photo is not None:
-        # Placeholder AI flow: image is captured and can be sent to the future model endpoint.
         st.success("Face captured. AI verification ready.")
         st.session_state["student_face_capture"] = face_photo
-
+        np.array(Image.open(face_photo))
     footer_dashboard()
