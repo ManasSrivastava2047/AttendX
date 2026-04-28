@@ -6,7 +6,7 @@ from PIL import Image
 import numpy as np
 from src.pipelines.face_pipeline import predict_attendance, get_face_embeddings,train_classifier
 from src.pipelines.voice_pipeline import get_voice_embeddings
-from src.database.db import get_all_students, create_student
+from src.database.db import get_all_students,create_student
 import time
 
 def student_dashboard():
@@ -56,16 +56,31 @@ def student_screen():
             st.session_state["login_type"] = None
             st.rerun()
 
-    st.header("Student Login")
-    st.caption("Use FaceID to continue.")
-    st.markdown("<br>", unsafe_allow_html=True)
-    with st.container(border=True):
-        st.subheader("Login using FaceID")
-        st.caption("Position your face in the center and capture a clear photo.")
+    st.header("Login using password")
+    student_username = st.text_input("Enter username", placeholder="student_username")
+    student_password = st.text_input("Enter password", type="password", placeholder="Enter password")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Login", type="secondary", icon=":material/passkey:", width="stretch"):
+            if not student_username or not student_password:
+                st.error("Please enter both username and password.")
+            else:
+                st.session_state["student_data"] = {"name": student_username}
+                st.session_state["user_role"] = "student"
+                st.session_state["is_logged_in"] = True
+                st.toast("Student login successful!")
+    with c2:
+        if st.button("Clear", type="primary", icon=":material/close:", width="stretch"):
+            st.rerun()
+
+    st.divider()
+    st.header("Login using FaceID")
+    st.caption("Position your face in the center")
     face_photo = st.camera_input("Capture your face")
     show_registration=False
     if face_photo is not None:
-        st.success("Face captured.")
+        st.success("Face captured. AI verification ready.")
         st.session_state["student_face_capture"] = face_photo
         img=np.array(Image.open(face_photo))
         with st.spinner("Verifying with AI..."):
@@ -88,27 +103,21 @@ def student_screen():
                         time.sleep(1)
                         st.rerun()
                 else:
-                    st.info("Face not recognized. You might be a new user.")
+                    st.info("Face not recognized.You might be a new user.")
                     show_registration=True
     if show_registration:
         with st.container(border = True):
-            st.subheader("New user registration")
-            st.caption("Complete details below to register with the current capture.")
+            st.subheader("New User Registration")
+            st.caption("Your face data will be registered for future logins. Please provide the following details.")
             new_name = st.text_input("Full Name", placeholder="Manas Srivastava")
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.subheader("Optional voice enrollment")
-            st.info("Record your voice sample if you want voice embedding with your profile.")
+            st.subheader("Optional : Voice Enrollment !! ")
+            st.info("Voice enrollment is optional but can enhance your login experience. You can enroll your voice for future voice-based authentication.")
             audio_data=None
             try:
                 audio_data = st.audio_input("Record your voice like (my name is ... or present in class ...)")
             except Exception as e:
                 st.warning("Audio input is not supported in this browser. Please use a compatible browser to enroll your voice.")
             if st.button("Create Account", type="primary", icon=":material/person_add:", width="stretch"):
-                if not new_name:
-                    st.error("Please fill all required fields to complete registration.")
-                    footer_dashboard()
-                    return
-
                 if new_name:
                     with st.spinner("Registering your data..."):
                         img=np.array(Image.open(st.session_state["student_face_capture"]))
@@ -118,11 +127,7 @@ def student_screen():
                             voice_emb=None
                             if audio_data:
                                 voice_emb=get_voice_embeddings(audio_data.read())
-                            response_data = create_student(
-                                new_name,
-                                face_embedding=face_emb,
-                                voice_embedding=voice_emb,
-                            )
+                            response_data=create_student(new_name,face_embedding=face_emb,voice_embedding= voice_emb)
                             if response_data:
                                 st.success("Registration successful! You can now login using FaceID.")
                                 train_classifier()
@@ -133,9 +138,9 @@ def student_screen():
                                 st.toast(f"Welcome back, {new_name}! Profile Created Successfully .")
                                 time.sleep(1)
                                 st.rerun()
-                            else:
-                                st.error("Username already exists. Please choose a different username.")
 
                         else:
                             st.error("Failed to extract facial features. Please ensure your face is clearly visible and try again.")
+                else:
+                    st.error("Please enter your full name to complete registration.")
     footer_dashboard()
