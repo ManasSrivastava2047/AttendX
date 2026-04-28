@@ -8,13 +8,13 @@ import streamlit as st
 def load_voice_encoder():
     encoder = VoiceEncoder()
     return encoder
-def get_voice_embedding(audio_bytes):
+def get_voice_embeddings(audio_bytes):
     try:
         encoder = load_voice_encoder()
         audio, sr = librosa.load(io.BytesIO(audio_bytes), sr=16000)
         wav=preprocess_wav(audio)
         embedding = encoder.embed_utterance(wav)
-        return embedding.to_list()
+        return embedding.tolist()
     except Exception as e:
         st.error(f"Error processing audio: {e}")
         return None

@@ -11,7 +11,7 @@ def load_dlib_models():
     sp=dlib.shape_predictor(face_recognition_models.pose_predictor_model_location())
     facerec=dlib.face_recognition_model_v1(face_recognition_models.face_recognition_model_location())
     return detector,sp,facerec
-def get_face_embedding(image_np):
+def get_face_embeddings(image_np):
     detector, sp, facerec = load_dlib_models()
     faces = detector(image_np, 1)
     encodings=[]
@@ -36,21 +36,21 @@ def get_trained_model():
         model.fit(X, y)
     except ValueError:
         pass
-    return {model:model,"X":X,"y":y}
+    return {"clf": model, "X": X, "y": y}
 def train_classifier():
     st.cache_resource.clear()
     model = get_trained_model()
     return bool(model)
 def predict_attendance(class_image_np):
-    encodings=get_face_embedding(class_image_np)
+    encodings=get_face_embeddings(class_image_np)
     detected_students={}
     model_data = get_trained_model()
     if not model_data:
-        st.warning("No face data available for training. Please ensure students have registered their faces.")
+        st.warning("No face data available for training.")
         return detected_students,[],len(encodings)
-    clf=model_data('clf')
-    X_train=model_data('X')
-    y_train=model_data('y')
+    clf=model_data['clf']
+    X_train = model_data['X']
+    y_train = model_data['y']
     all_students=sorted(list(set(y_train)))
     for encoding in encodings:
         if len(all_students)>=2:
