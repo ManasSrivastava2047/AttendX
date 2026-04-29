@@ -41,7 +41,7 @@ def home_screen():
         st.header("I'm Student")
         st.image("https://i.ibb.co/844D9Lrt/mascot-student.png", width=118)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button('Student Portal', type='primary', icon=':material/arrow_outward:', icon_position='right'):
+        if st.button('Student Portal', type='primary', icon=':material/school:', icon_position='left'):
             st.session_state['login_type'] = 'student'
             st.rerun()
 
@@ -50,7 +50,7 @@ def home_screen():
         st.header("I'm Teacher")
         st.image("https://i.ibb.co/CsmQQV6X/mascot-prof.png", width=143)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button('Teacher Portal', type='primary', icon=':material/arrow_outward:', icon_position='right'):
+        if st.button('Teacher Portal', type='primary', icon=':material/co_present:', icon_position='left'):
             st.session_state['login_type'] = 'teacher'
             st.rerun()
 

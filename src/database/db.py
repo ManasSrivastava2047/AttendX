@@ -80,3 +80,50 @@ def create_student(new_name, username=None, password=None, face_embedding=None, 
 
     res = supabase.table("students").insert(payload).execute()
     return res.data
+
+
+def get_teacher_subjects(teacher_id):
+    try:
+        response = (
+            supabase.table("subjects")
+            .select("*")
+            .eq("teacher_id", teacher_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        data = response.data or []
+        normalized = []
+        for row in data:
+            item = dict(row)
+            item.setdefault("subject_code", item.get("code", "NA"))
+            item.setdefault("code", item.get("subject_code", "NA"))
+            item.setdefault("section", "C")
+            item.setdefault("total_students", 0)
+            item.setdefault("total_classes", 0)
+            normalized.append(item)
+        return normalized
+    except APIError:
+        # Allows UI to continue even if subjects table is not yet created.
+        return []
+
+
+def get_teacher_subject(teacher_id):
+    # Kept for compatibility with existing screen code naming.
+    return get_teacher_subjects(teacher_id)
+
+
+def create_subject(teacher_id, subject_name, subject_code=None):
+    clean_name = subject_name.strip()
+    clean_code = (subject_code or "").strip().upper()
+    if not clean_code:
+        clean_code = f"{clean_name[:3].upper()}-001" if clean_name else "SUB-001"
+
+    payload = {
+        "teacher_id": teacher_id,
+        "name": clean_name,
+        "subject_code": clean_code,
+        "section": "C",
+    }
+
+    response = supabase.table("subjects").insert(payload).execute()
+    return response.data
