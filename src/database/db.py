@@ -61,8 +61,18 @@ def student_login(username: str, password: str):
     if not stored_hashed_password:
         return None
 
-    if bcrypt.checkpw(password.encode("utf-8"), stored_hashed_password.encode("utf-8")):
-        return student
+    # Preferred path: bcrypt hash verification.
+    try:
+        if bcrypt.checkpw(password.encode("utf-8"), stored_hashed_password.encode("utf-8")):
+            return student
+    except ValueError:
+        # Backward compatibility: some existing rows may store plain-text password.
+        # If plain-text matches, transparently upgrade it to bcrypt.
+        if stored_hashed_password == password:
+            new_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            supabase.table("students").update({"password": new_hash}).eq("student_id", student["student_id"]).execute()
+            student["password"] = new_hash
+            return student
     return None
 
 

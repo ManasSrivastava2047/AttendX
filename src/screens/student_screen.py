@@ -6,7 +6,7 @@ from PIL import Image
 import numpy as np
 from src.pipelines.face_pipeline import predict_attendance, get_face_embeddings,train_classifier
 from src.pipelines.voice_pipeline import get_voice_embeddings
-from src.database.db import get_all_students,create_student
+from src.database.db import get_all_students,create_student,student_login
 import time
 
 def student_dashboard():
@@ -56,91 +56,118 @@ def student_screen():
             st.session_state["login_type"] = None
             st.rerun()
 
-    st.header("Login using password")
-    student_username = st.text_input("Enter username", placeholder="student_username")
-    student_password = st.text_input("Enter password", type="password", placeholder="Enter password")
+    login_mode = st.radio(
+        "Login method",
+        ["Face ID", "Username & Password"],
+        horizontal=True,
+    )
 
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Login", type="secondary", icon=":material/passkey:", width="stretch"):
-            if not student_username or not student_password:
-                st.error("Please enter both username and password.")
-            else:
-                st.session_state["student_data"] = {"name": student_username}
-                st.session_state["user_role"] = "student"
-                st.session_state["is_logged_in"] = True
-                st.toast("Student login successful!")
-    with c2:
-        if st.button("Clear", type="primary", icon=":material/close:", width="stretch"):
-            st.rerun()
+    if login_mode == "Username & Password":
+        st.header("Login using username and password")
+        student_username = st.text_input("Enter username", placeholder="student_username")
+        student_password = st.text_input("Enter password", type="password", placeholder="Enter password")
 
-    st.divider()
-    st.header("Login using FaceID")
-    st.caption("Position your face in the center")
-    face_photo = st.camera_input("Capture your face")
-    show_registration=False
-    if face_photo is not None:
-        st.success("Face captured. AI verification ready.")
-        st.session_state["student_face_capture"] = face_photo
-        img=np.array(Image.open(face_photo))
-        with st.spinner("Verifying with AI..."):
-            detected,all_ids,num_faces=predict_attendance(img)
-            if num_faces==0:
-                st.warning("No face detected. Please try again.")
-            elif num_faces>1:
-                st.warning("Multiple faces detected. Please ensure only your face is visible.")
-            else:
-                if detected:
-                    student_id=list(detected.keys())[0]
-                    all_students=get_all_students()
-                    student=next((s for s in all_students if s["student_id"] == student_id), None)
-                    if student:
-                        st.session_state["student_data"] = student
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Login", type="secondary", icon=":material/passkey:", width="stretch"):
+                if not student_username or not student_password:
+                    st.error("Please enter both username and password.")
+                else:
+                    student_data = student_login(student_username, student_password)
+                    if student_data:
+                        st.session_state["student_data"] = student_data
                         st.session_state["user_role"] = "student"
                         st.session_state["is_logged_in"] = True
-                        st.session_state.pop("student_face_capture", None)
-                        st.toast(f"Welcome back, {student['name']}! FaceID login successful.")
+                        st.toast("Student login successful!")
                         time.sleep(1)
                         st.rerun()
+                    else:
+                        st.error("Invalid username or password. Please try again.")
+        with c2:
+            if st.button("Clear", type="primary", icon=":material/close:", width="stretch"):
+                st.rerun()
+    else:
+        st.header("Login using FaceID")
+        st.caption("Position your face in the center")
+        face_photo = st.camera_input("Capture your face")
+        show_registration=False
+        if face_photo is not None:
+            st.success("Face captured. AI verification ready.")
+            st.session_state["student_face_capture"] = face_photo
+            img=np.array(Image.open(face_photo))
+            with st.spinner("Verifying with AI..."):
+                detected,all_ids,num_faces=predict_attendance(img)
+                if num_faces==0:
+                    st.warning("No face detected. Please try again.")
+                elif num_faces>1:
+                    st.warning("Multiple faces detected. Please ensure only your face is visible.")
                 else:
-                    st.info("Face not recognized.You might be a new user.")
-                    show_registration=True
-    if show_registration:
-        with st.container(border = True):
-            st.subheader("New User Registration")
-            st.caption("Your face data will be registered for future logins. Please provide the following details.")
-            new_name = st.text_input("Full Name", placeholder="Manas Srivastava")
-            st.subheader("Optional : Voice Enrollment !! ")
-            st.info("Voice enrollment is optional but can enhance your login experience. You can enroll your voice for future voice-based authentication.")
-            audio_data=None
-            try:
-                audio_data = st.audio_input("Record your voice like (my name is ... or present in class ...)")
-            except Exception as e:
-                st.warning("Audio input is not supported in this browser. Please use a compatible browser to enroll your voice.")
-            if st.button("Create Account", type="primary", icon=":material/person_add:", width="stretch"):
-                if new_name:
-                    with st.spinner("Registering your data..."):
-                        img=np.array(Image.open(st.session_state["student_face_capture"]))
-                        encodings=get_face_embeddings(img)
-                        if encodings:
-                            face_emb=encodings[0].tolist()
-                            voice_emb=None
-                            if audio_data:
-                                voice_emb=get_voice_embeddings(audio_data.read())
-                            response_data=create_student(new_name,face_embedding=face_emb,voice_embedding= voice_emb)
-                            if response_data:
-                                st.success("Registration successful! You can now login using FaceID.")
-                                train_classifier()
-                                st.session_state["student_data"] = response_data[0]
-                                st.session_state["user_role"] = "student"
-                                st.session_state["is_logged_in"] = True
-                                st.session_state.pop("student_face_capture", None)
-                                st.toast(f"Welcome back, {new_name}! Profile Created Successfully .")
-                                time.sleep(1)
-                                st.rerun()
+                    if detected:
+                        student_id=list(detected.keys())[0]
+                        all_students=get_all_students()
+                        student=next((s for s in all_students if s["student_id"] == student_id), None)
+                        if student:
+                            st.session_state["student_data"] = student
+                            st.session_state["user_role"] = "student"
+                            st.session_state["is_logged_in"] = True
+                            st.session_state.pop("student_face_capture", None)
+                            st.toast(f"Welcome back, {student['name']}! FaceID login successful.")
+                            time.sleep(1)
+                            st.rerun()
+                    else:
+                        st.info("Face not recognized.You might be a new user.")
+                        show_registration=True
+        if show_registration:
+            with st.container(border = True):
+                st.subheader("New User Registration")
+                st.caption("Your face data will be registered for future logins. Please provide the following details.")
+                new_name = st.text_input("Full Name", placeholder="Manas Srivastava")
+                new_username = st.text_input("Username", placeholder="manassrivastava")
+                new_password = st.text_input("Create Password", type="password", placeholder="At least 6 characters")
+                confirm_password = st.text_input("Confirm Password", type="password", placeholder="Re-enter password")
+                st.subheader("Optional : Voice Enrollment !! ")
+                st.info("Voice enrollment is optional but can enhance your login experience. You can enroll your voice for future voice-based authentication.")
+                audio_data=None
+                try:
+                    audio_data = st.audio_input("Record your voice like (my name is ... or present in class ...)")
+                except Exception as e:
+                    st.warning("Audio input is not supported in this browser. Please use a compatible browser to enroll your voice.")
+                if st.button("Create Account", type="primary", icon=":material/person_add:", width="stretch"):
+                    if not new_name or not new_username or not new_password or not confirm_password:
+                        st.error("Please fill all required fields (name, username, password).")
+                    elif new_password != confirm_password:
+                        st.error("Passwords do not match.")
+                    elif len(new_password) < 6:
+                        st.error("Password must be at least 6 characters long.")
+                    else:
+                        with st.spinner("Registering your data..."):
+                            img=np.array(Image.open(st.session_state["student_face_capture"]))
+                            encodings=get_face_embeddings(img)
+                            if encodings:
+                                face_emb=encodings[0].tolist()
+                                voice_emb=None
+                                if audio_data:
+                                    voice_emb=get_voice_embeddings(audio_data.read())
+                                response_data=create_student(
+                                    new_name,
+                                    username=new_username,
+                                    password=new_password,
+                                    face_embedding=face_emb,
+                                    voice_embedding=voice_emb,
+                                )
+                                if response_data:
+                                    st.success("Registration successful! You can now login using FaceID.")
+                                    train_classifier()
+                                    st.session_state["student_data"] = response_data[0]
+                                    st.session_state["user_role"] = "student"
+                                    st.session_state["is_logged_in"] = True
+                                    st.session_state.pop("student_face_capture", None)
+                                    st.toast(f"Welcome back, {new_name}! Profile Created Successfully .")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error("Username already exists or student auth columns are missing in database.")
 
-                        else:
-                            st.error("Failed to extract facial features. Please ensure your face is clearly visible and try again.")
-                else:
-                    st.error("Please enter your full name to complete registration.")
+                            else:
+                                st.error("Failed to extract facial features. Please ensure your face is clearly visible and try again.")
     footer_dashboard()
