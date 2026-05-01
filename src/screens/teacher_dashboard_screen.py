@@ -5,7 +5,7 @@ from src.components.footer import footer_dashboard
 from src.components.subject_card import subject_card
 from src.database.db import get_teacher_subject
 from src.ui.base_layout import style_base_layout, style_background_dashboard
-
+from src.components.dialog_share_subject import share_subject_dialog
 
 def _logout_teacher():
     st.session_state.pop("teacher_data", None)
@@ -199,12 +199,14 @@ def teacher_dashboard_screen():
                     ]
 
                     def share_btn(sub=item):
-                        st.button(
+                        if st.button(
                             f"Share Code: {sub.get('name', '-')}",
                             key=f"share_{sub.get('subject_code', sub.get('code', 'na'))}",
                             icon=":material/share:",
                             type="secondary",
-                        )
+                        ):
+                            share_subject_dialog(sub['name'],sub['subject_code'])
+                        st.space()
 
                     subject_card(
                         name=item.get("name", "-"),
