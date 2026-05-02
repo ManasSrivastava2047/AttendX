@@ -220,12 +220,12 @@ def student_screen():
             with st.container(border=True):
                 st.subheader("New User Registration")
                 st.caption("Your face data will be registered for future logins. Please provide the following details.")
-                new_name         = st.text_input("Full Name",        placeholder="Manas Srivastava")
-                new_username     = st.text_input("Username",         placeholder="manassrivastava")
+                new_name         = st.text_input("Full Name",        placeholder="Enter your full name")
+                new_username     = st.text_input("Username",         placeholder="Enter a unique username")
                 new_password     = st.text_input("Create Password",  type="password", placeholder="At least 6 characters")
                 confirm_password = st.text_input("Confirm Password", type="password", placeholder="Re-enter password")
                 st.subheader("Optional : Voice Enrollment !!")
-                st.info("Voice enrollment is optional but can enhance your login experience. You can enroll your voice for future voice-based authentication.")
+                st.info("Voice enrollment is OPTIONAL but can enhance your login experience. You can enroll your voice for future voice-based authentication.")
                 audio_data = None
                 try:
                     audio_data = st.audio_input("Record your voice like (my name is ... or present in class ...)")
