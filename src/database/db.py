@@ -118,7 +118,6 @@ def get_teacher_subjects(teacher_id):
 
 
 def get_teacher_subject(teacher_id):
-    # Kept for compatibility with existing screen code naming.
     return get_teacher_subjects(teacher_id)
 
 
@@ -136,4 +135,30 @@ def create_subject(teacher_id, subject_name, subject_code=None):
     }
 
     response = supabase.table("subjects").insert(payload).execute()
+    return response.data
+def enroll_student_to_subject(student_id, subject_id):
+    payload = {
+        "student_id": student_id,
+        "subject_id": subject_id,
+    }
+    response = supabase.table("subject_students").insert(payload).execute()
+    return response.data
+def unenroll_student_from_subject(student_id, subject_id):
+    response = supabase.table("subject_students").delete().eq("student_id", student_id).eq("subject_id", subject_id).execute()
+    return response.data
+def get_student_subjects(student_id):
+    response = (
+        supabase.table("subject_students")
+        .select("*,subjects(*)")
+        .eq("student_id", student_id)
+        .execute()
+    )
+    return response.data
+def get_student_attendance(student_id):
+    response = (
+        supabase.table("attendance_logs")
+        .select("*,subjects(*)")
+        .eq("student_id", student_id)
+        .execute()
+    )
     return response.data

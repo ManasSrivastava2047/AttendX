@@ -4,6 +4,7 @@ from src.components.dialog_create_subject import create_subject_dialog
 from src.components.footer import footer_dashboard
 from src.components.subject_card import subject_card
 from src.database.db import get_teacher_subject
+from src.database.config import supabase
 from src.ui.base_layout import style_base_layout, style_background_dashboard
 from src.components.dialog_share_subject import share_subject_dialog
 
@@ -13,6 +14,17 @@ def _logout_teacher():
     st.session_state["user_role"] = None
     st.session_state["is_logged_in"] = False
     st.session_state["login_type"] = None
+
+
+def _get_subject_student_count(subject_id):
+    """Live count of enrolled students from subject_students table."""
+    res = (
+        supabase.table("subject_students")
+        .select("student_id", count="exact")
+        .eq("subject_id", subject_id)
+        .execute()
+    )
+    return res.count if res.count is not None else 0
 
 
 def _style_teacher_dashboard():
@@ -193,8 +205,9 @@ def teacher_dashboard_screen():
             subjects = get_teacher_subject(teacher_id)
             if subjects:
                 for item in subjects:
+                    subject_id = item.get("subject_id")
                     stats = [
-                        ("👥", "Students", item.get("total_students", 0)),
+                        ("👥", "Students", _get_subject_student_count(subject_id)),
                         ("🏫", "Classes", item.get("total_classes", 0)),
                     ]
 
