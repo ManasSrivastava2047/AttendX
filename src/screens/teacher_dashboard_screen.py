@@ -1,5 +1,6 @@
 import streamlit as st
 
+from src.components.dialog_add_photo import add_photos_dialog
 from src.components.dialog_create_subject import create_subject_dialog
 from src.components.footer import footer_dashboard
 from src.components.subject_card import subject_card
@@ -25,6 +26,81 @@ def _get_subject_student_count(subject_id):
         .execute()
     )
     return res.count if res.count is not None else 0
+
+
+def teacher_tab_take_attendance():
+    st.markdown('<div class="section-title">Take AI Attendance</div>', unsafe_allow_html=True)
+
+    if "attendance_images" not in st.session_state:
+        st.session_state.attendance_images = []
+
+    teacher_id = st.session_state.get("teacher_data", {}).get("teacher_id")
+    if teacher_id is None:
+        st.error("Teacher ID not found. Please login again.")
+        return
+
+    subjects = get_teacher_subject(teacher_id)
+    if not subjects:
+        st.warning("You havent created any subjects yet! Please create one to begin!")
+        return
+
+    subject_options = {
+        f"{s['name']} - {s['subject_code']}": s["subject_id"] for s in subjects
+    }
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.selectbox("Select Subject", options=list(subject_options.keys()))
+    with col2:
+        if st.button(
+            "Add Photos",
+            type="primary",
+            icon=":material/photo_prints:",
+            width="stretch",
+        ):
+            add_photos_dialog()
+
+    st.divider()
+
+    if st.session_state.attendance_images:
+        st.markdown(
+            '<div class="photos-section-title">Added Photos</div>',
+            unsafe_allow_html=True,
+        )
+        cols = st.columns(4)
+        for i, pil_img in enumerate(st.session_state.attendance_images):
+            cols[i % 4].image(pil_img, use_container_width=True)
+
+    st.divider()
+    bc1, bc2, bc3 = st.columns(3)
+    with bc1:
+        if st.button(
+            "Clear all photos",
+            type="primary",
+            icon=":material/delete:",
+            width="stretch",
+            key="teacher_btn_clear_photos",
+        ):
+            st.session_state.attendance_images = []
+            st.session_state.pop("dialog_upload_seen", None)
+            st.session_state.pop("dialog_cam_last_digest", None)
+            st.rerun()
+
+    with bc2:
+        st.button(
+            "Run Face Analysis",
+            type="secondary",
+            icon=":material/analytics:",
+            width="stretch",
+        )
+
+    with bc3:
+        st.button(
+            "Use Voice Attendance",
+            type="primary",
+            icon=":material/mic:",
+            width="stretch",
+        )
 
 
 def _style_teacher_dashboard():
@@ -143,6 +219,25 @@ def _style_teacher_dashboard():
             margin-top: 1.1rem;
             margin-bottom: 0.8rem;
         }
+
+        .photos-section-title {
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: #2D2A3E;
+            margin-top: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        div.st-key-teacher_btn_clear_photos button {
+            background: #0B0B12 !important;
+            box-shadow: 0 4px 0 #1D1D2D !important;
+            border: none !important;
+        }
+
+        div.st-key-teacher_btn_clear_photos button:hover {
+            transform: translateY(-2px) !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -179,12 +274,7 @@ def teacher_dashboard_screen():
     )
 
     with take_attendance_tab:
-        st.markdown('<div class="section-title">Take Attendance</div>', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.button("Start Face Attendance", type="secondary", width="stretch")
-        with c2:
-            st.button("Start Manual Attendance", type="primary", width="stretch")
+        teacher_tab_take_attendance()
 
     with manage_subjects_tab:
         teacher_id = st.session_state.get("teacher_data", {}).get("teacher_id")
