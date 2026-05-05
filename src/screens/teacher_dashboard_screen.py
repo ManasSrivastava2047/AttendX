@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from src.components.dialog_add_photo import add_photos_dialog
 from src.components.dialog_attendance_results import attendance_result_dialog
+from src.components.dialog_voice_attendance import voice_attendance_dialog
 from src.components.dialog_create_subject import create_subject_dialog
 from src.components.footer import footer_dashboard
 from src.components.subject_card import subject_card
@@ -142,13 +143,14 @@ def teacher_tab_take_attendance():
                     attendance_result_dialog(pd.DataFrame(results), attendance_to_log)
 
     with bc3:
-        st.button(
+        if st.button(
             "Use Voice Attendance",
             type="primary",
             icon=":material/mic:",
             width="stretch",
-        )
-
+            key="teacher_btn_voice_attendance",
+        ):
+            voice_attendance_dialog(subject_options[selected_subject])
 
 def _style_teacher_dashboard():
     st.markdown(
