@@ -1,8 +1,17 @@
 import streamlit as st
+import base64
+from pathlib import Path
 
 from src.components.footer import footer_dashboard
 from src.ui.base_layout import style_base_layout, style_background_dashboard
 from src.database.db import check_teacher_exists, teacher_login
+
+
+def _logo_data_uri():
+    logo_path = Path("src/components/Attendx logo.png")
+    logo_bytes = logo_path.read_bytes()
+    encoded = base64.b64encode(logo_bytes).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
 
 def teacher_screen():
     style_background_dashboard()
@@ -12,23 +21,12 @@ def teacher_screen():
 
     left_col, right_col = st.columns(2, vertical_alignment="center", gap="large")
     with left_col:
+        logo_uri = _logo_data_uri()
         st.markdown(
             """
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="
-                    width:62px;height:62px;border-radius:18px;
-                    background:#FFE600;border:2px solid #2D2A3E;
-                    display:flex;align-items:center;justify-content:center;
-                    font-size:1.35rem;
-                ">🎓</div>
-                <div>
-                    <div style="font-size:2.2rem;font-weight:900;line-height:0.9;color:#2D2A3E;">
-                        Attend<span style="color:#FF8FAB;">X</span>
-                    </div>
-                    <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.14em;color:#9B94C0;margin-top:6px;text-transform:uppercase;">
-                        Attendance Management
-                    </div>
-                </div>
+            <div style="display:flex;align-items:center;">
+                <img src='""" + logo_uri + """' alt='AttendX Logo'
+                     style='height:70px;width:auto;display:block;' />
             </div>
             """,
             unsafe_allow_html=True,

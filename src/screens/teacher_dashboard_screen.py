@@ -2,6 +2,8 @@ import streamlit as st
 import numpy as np
 from datetime import datetime
 import pandas as pd
+import base64
+from pathlib import Path
 from src.components.dialog_add_photo import add_photos_dialog
 from src.components.dialog_attendance_results import attendance_result_dialog
 from src.components.dialog_voice_attendance import voice_attendance_dialog
@@ -14,6 +16,14 @@ from src.ui.base_layout import style_base_layout, style_background_dashboard
 from src.components.dialog_share_subject import share_subject_dialog
 from src.pipelines.face_pipeline import predict_attendance
 from src.database.config import supabase
+
+
+def _logo_data_uri():
+    logo_path = Path("src/components/Attendx logo.png")
+    logo_bytes = logo_path.read_bytes()
+    encoded = base64.b64encode(logo_bytes).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
 
 def _logout_teacher():
     st.session_state.pop("teacher_data", None)
@@ -288,16 +298,10 @@ def _style_teacher_dashboard():
             gap: 0.7rem;
         }
 
-        .teacher-logo {
-            width: 58px;
-            height: 58px;
-            border-radius: 16px;
-            background: #FFE600;
-            border: 2px solid #2D2A3E;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.45rem;
+        .teacher-logo img {
+            height: 64px;
+            width: auto;
+            display: block;
         }
 
         .teacher-brand-text {
@@ -416,11 +420,12 @@ def teacher_dashboard_screen():
     _style_teacher_dashboard()
 
     teacher_name = st.session_state.get("teacher_data", {}).get("name", "Teacher")
+    logo_uri = _logo_data_uri()
     st.markdown(
         f"""
         <div class="teacher-top-wrap">
             <div class="teacher-brand">
-                <div class="teacher-logo">🎓</div>
+                <div class="teacher-logo"><img src="{logo_uri}" alt="AttendX Logo" /></div>
                 <div>
                     <div class="teacher-brand-text">Welcome, {teacher_name}</div>
                     <div class="teacher-subtitle">Teacher Dashboard</div>

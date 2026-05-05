@@ -6,6 +6,11 @@ from src.screens.student_screen import student_screen
 from src.ui.base_layout import render_theme_toggle
 from src.components.dialog_autoenroll import auto_enroll_dialog
 def main():
+    st.set_page_config(
+    page_title="ATTENDX : Complete AI Attendance Management App",
+    page_icon="src/components/Attendx_logo.png",
+    layout="centered"
+    )
     if 'login_type' not in st.session_state:
         st.session_state['login_type'] = None
     if "dark_mode" not in st.session_state:

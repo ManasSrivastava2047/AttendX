@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 @st.dialog("Share Class Link")
 def share_subject_dialog(name, code):
-    app_domain = st.secrets.get("app_domain", "http://localhost:8501")
+    app_domain = st.secrets.get("app_domain", "attendx-main.streamlit.app")
     encoded_code = quote(code, safe="")
     subject_link = f"{app_domain}/join?code={encoded_code}"
 

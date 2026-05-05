@@ -6,6 +6,8 @@ from src.components.subject_card import subject_card
 from src.ui.base_layout import style_base_layout, style_background_dashboard
 from PIL import Image
 import numpy as np
+import base64
+from pathlib import Path
 from src.pipelines.face_pipeline import predict_attendance, get_face_embeddings, train_classifier
 from src.pipelines.voice_pipeline import get_voice_embeddings
 from src.database.db import (
@@ -21,23 +23,19 @@ import time
 
 # ── Shared logo markup ────────────────────────────────────────────────────────
 
+def _logo_data_uri():
+    logo_path = Path("src/components/Attendx logo.png")
+    logo_bytes = logo_path.read_bytes()
+    encoded = base64.b64encode(logo_bytes).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
 def _logo_html():
+    logo_uri = _logo_data_uri()
     return """
-    <div style="display:flex;align-items:center;gap:12px;">
-        <div style="
-            width:62px;height:62px;border-radius:18px;
-            background:#FFE600;border:2px solid #2D2A3E;
-            display:flex;align-items:center;justify-content:center;
-            font-size:1.35rem;">📚</div>
-        <div>
-            <div style="font-size:2.2rem;font-weight:900;line-height:0.9;">
-                Attend<span style="color:#FF8FAB;">X</span>
-            </div>
-            <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.14em;
-                        color:#9B94C0;margin-top:6px;text-transform:uppercase;">
-                Attendance Management
-            </div>
-        </div>
+    <div style="display:flex;align-items:center;">
+        <img src='""" + logo_uri + """' alt='AttendX Logo'
+             style='height:70px;width:auto;display:block;' />
     </div>
     """
 
