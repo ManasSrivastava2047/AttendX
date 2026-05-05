@@ -77,15 +77,23 @@ streamlit run app.py
 ```
 
 ## Database Schema Diagram
-No private keys, URLs, or sensitive credentials are included in this diagram.
 
 ![AttendX Database Schema](assets/db_schema.png)
 
 ## Troubleshooting (Quick)
-- `dlib` install issue (Windows): install C++ Build Tools + CMake, then reinstall requirements.
-- Camera/audio not opening: try Chrome/Edge and allow browser permissions.
-- Supabase errors: recheck `SUPABASE_URL` and `SUPABASE_KEY` in secrets.
-- QR join link wrong: set correct `app_domain` in secrets.
+
+**1. dlib installation fails (Windows)**
+Install C++ Build Tools and CMake, then reinstall requirements.
+
+**2. Camera / Microphone not working**
+Use Chrome or Edge and allow browser permissions.
+
+**3. Supabase connection errors**
+Double-check `SUPABASE_URL` and `SUPABASE_KEY` in `.streamlit/secrets.toml`.
+
+**4. QR join link incorrect**
+Ensure `app_domain` is correctly set in secrets.
+
 
 ## Screenshots
 
