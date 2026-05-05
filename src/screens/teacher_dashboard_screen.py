@@ -1,6 +1,7 @@
 import streamlit as st
-
+import numpy as np
 from src.components.dialog_add_photo import add_photos_dialog
+from src.components.dialog_attendance_results import attendance_result_dialog
 from src.components.dialog_create_subject import create_subject_dialog
 from src.components.footer import footer_dashboard
 from src.components.subject_card import subject_card
@@ -8,6 +9,10 @@ from src.database.db import get_teacher_subject
 from src.database.config import supabase
 from src.ui.base_layout import style_base_layout, style_background_dashboard
 from src.components.dialog_share_subject import share_subject_dialog
+from src.pipelines.face_pipeline import predict_attendance
+from src.database.config import supabase
+from datetime import datetime
+import pandas as pd
 
 def _logout_teacher():
     st.session_state.pop("teacher_data", None)
@@ -50,7 +55,11 @@ def teacher_tab_take_attendance():
 
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.selectbox("Select Subject", options=list(subject_options.keys()))
+        selected_subject = st.selectbox(
+            "Select Subject",
+            options=list(subject_options.keys()),
+            key="selected_subject",
+        )
     with col2:
         if st.button(
             "Add Photos",
@@ -87,12 +96,50 @@ def teacher_tab_take_attendance():
             st.rerun()
 
     with bc2:
-        st.button(
+        has_photos = bool(st.session_state.attendance_images)
+        if st.button(
             "Run Face Analysis",
             type="secondary",
             icon=":material/analytics:",
             width="stretch",
-        )
+        ):
+            with st.spinner("Analyzing photos..."):
+                all_detected_id={}
+                for idx,img in enumerate(st.session_state.attendance_images):
+                    img_np=np.array(img.convert("RGB"))
+                    detected,_,_=predict_attendance(img_np)
+                    if detected:
+                        for sid in detected.keys():
+                            student_id=int(sid)
+                            all_detected_id.setdefault(student_id,[]).append(f"Photo {idx + 1}")
+                enrolled_res=supabase.table("subject_students").select("*,students(*)").eq("subject_id", subject_options[selected_subject]).execute()
+                enrolled_students=enrolled_res.data
+                if not enrolled_students:
+                    st.warning("No students are enrolled in this course yet!")
+                else:
+                    results,attendance_to_log=[],[]
+                    current_timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    for node in enrolled_students:
+                        student=node['students']
+                        sources = all_detected_id.get(int(student['student_id']), [])
+                        is_present = len(sources)>0
+                        results.append(
+                            {
+                                "Name": student['name'],
+                                "ID": student['student_id'],
+                                "Source": ", ".join(sources) if is_present else "Not Detected",
+                                "Status": "Present" if is_present else "Absent"
+                            }
+                        )
+                        attendance_to_log.append(
+                            {
+                                "student_id": student['student_id'],
+                                "subject_id": subject_options[selected_subject],
+                                "timestamp": current_timestamp,
+                                "is_present": bool(is_present)
+                            }
+                        )
+                    attendance_result_dialog(pd.DataFrame(results), attendance_to_log)
 
     with bc3:
         st.button(
