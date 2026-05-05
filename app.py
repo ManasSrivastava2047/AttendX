@@ -8,7 +8,7 @@ from src.components.dialog_autoenroll import auto_enroll_dialog
 def main():
     st.set_page_config(
     page_title="ATTENDX : Complete AI Attendance Management App",
-    page_icon="src/components/Attendx_logo.png",
+    page_icon="assets/attendx-logo.png",
     layout="centered"
     )
     if 'login_type' not in st.session_state:

@@ -19,7 +19,7 @@ from src.database.config import supabase
 
 
 def _logo_data_uri():
-    logo_path = Path("src/components/Attendx logo.png")
+    logo_path = Path("assets/attendx-logo.png")
     logo_bytes = logo_path.read_bytes()
     encoded = base64.b64encode(logo_bytes).decode("ascii")
     return f"data:image/png;base64,{encoded}"

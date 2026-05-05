@@ -44,7 +44,7 @@ def footer_home():
         <div class="footer-home">
             <div class="footer-squiggle">· · · · ·</div>
             <div class="footer-text">
-                made with <span class="footer-heart">♥</span> &nbsp;·&nbsp; AttendX
+                made with <span class="footer-heart">❤️</span> by Manas Srivastava
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -94,7 +94,7 @@ def footer_dashboard():
         <div class="footer-dash">
             <div class="footer-dash-squiggle">· · · · ·</div>
             <div class="footer-dash-text">
-                made with <span class="footer-dash-heart">♥</span> &nbsp;·&nbsp; AttendX
+                made with <span class="footer-dash-heart">❤️</span> by Manas Srivastava
             </div>
         </div>
     """, unsafe_allow_html=True)
