@@ -80,6 +80,9 @@ streamlit run app.py
 
 ![AttendX Database Schema](assets/db_schema.png)
 
+Note: This diagram only represents database structure. No sensitive data, credentials, or API keys are exposed.
+
+
 ## Troubleshooting (Quick)
 
 **1. dlib installation fails (Windows)**
