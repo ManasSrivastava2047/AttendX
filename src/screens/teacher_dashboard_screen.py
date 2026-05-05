@@ -1,19 +1,19 @@
 import streamlit as st
 import numpy as np
+from datetime import datetime
+import pandas as pd
 from src.components.dialog_add_photo import add_photos_dialog
 from src.components.dialog_attendance_results import attendance_result_dialog
 from src.components.dialog_voice_attendance import voice_attendance_dialog
 from src.components.dialog_create_subject import create_subject_dialog
 from src.components.footer import footer_dashboard
 from src.components.subject_card import subject_card
-from src.database.db import get_teacher_subject
+from src.database.db import get_teacher_subject, get_attendance_for_teacher
 from src.database.config import supabase
 from src.ui.base_layout import style_base_layout, style_background_dashboard
 from src.components.dialog_share_subject import share_subject_dialog
 from src.pipelines.face_pipeline import predict_attendance
 from src.database.config import supabase
-from datetime import datetime
-import pandas as pd
 
 def _logout_teacher():
     st.session_state.pop("teacher_data", None)
@@ -129,7 +129,7 @@ def teacher_tab_take_attendance():
                                 "Name": student['name'],
                                 "ID": student['student_id'],
                                 "Source": ", ".join(sources) if is_present else "Not Detected",
-                                "Status": "Present" if is_present else "Absent"
+                                "Status": "✅ Present" if is_present else "❌ Absent"
                             }
                         )
                         attendance_to_log.append(
@@ -151,6 +151,123 @@ def teacher_tab_take_attendance():
             key="teacher_btn_voice_attendance",
         ):
             voice_attendance_dialog(subject_options[selected_subject])
+
+
+def teacher_tab_attendance_records():
+    st.markdown('<div class="section-title">Attendance Records</div>', unsafe_allow_html=True)
+
+    teacher_id = st.session_state.get("teacher_data", {}).get("teacher_id")
+    if teacher_id is None:
+        st.error("Teacher ID not found. Please login again.")
+        return
+
+    records = get_attendance_for_teacher(teacher_id)
+    if not records:
+        st.info("No attendance records found yet.")
+        return
+
+    data = []
+    for r in records:
+        ts = r.get("timestamp")
+        parsed_dt = None
+        if ts:
+            try:
+                parsed_dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+            except ValueError:
+                parsed_dt = None
+
+        subjects = r.get("subjects") or {}
+        data.append(
+            {
+                "ts_group": str(ts).split(".")[0] if ts else None,
+                "Time": parsed_dt.strftime("%Y-%m-%d %I:%M %p") if parsed_dt else str(ts),
+                "Subject": subjects.get("name", "-"),
+                "Subject Code": subjects.get("subject_code", "-"),
+                "is_present": bool(r.get("is_present", False)),
+            }
+        )
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        st.info("No attendance records found yet.")
+        return
+
+    student_ids = sorted(
+        {int(r.get("student_id")) for r in records if r.get("student_id") is not None}
+    )
+    student_name_map = {}
+    if student_ids:
+        students_res = (
+            supabase.table("students")
+            .select("student_id,name")
+            .in_("student_id", student_ids)
+            .execute()
+        )
+        student_name_map = {
+            int(s["student_id"]): s.get("name", "-")
+            for s in (students_res.data or [])
+            if s.get("student_id") is not None
+        }
+
+    export_rows = []
+    for r in records:
+        ts = r.get("timestamp")
+        parsed_dt = None
+        if ts:
+            try:
+                parsed_dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+            except ValueError:
+                parsed_dt = None
+
+        subjects = r.get("subjects") or {}
+        sid = r.get("student_id")
+        sid_int = int(sid) if sid is not None else None
+        export_rows.append(
+            {
+                "Time": parsed_dt.strftime("%Y-%m-%d %I:%M %p") if parsed_dt else str(ts),
+                "Subject": subjects.get("name", "-"),
+                "Subject Code": subjects.get("subject_code", "-"),
+                "Student ID": sid_int,
+                "Student Name": student_name_map.get(sid_int, "-"),
+                "Status": "Present" if bool(r.get("is_present", False)) else "Absent",
+            }
+        )
+    export_df = pd.DataFrame(export_rows)
+
+    summary = (
+        df.groupby(["ts_group", "Time", "Subject", "Subject Code"], dropna=False)
+        .agg(
+            Present_Count=("is_present", "sum"),
+            Total_Count=("is_present", "count"),
+        )
+        .reset_index()
+    )
+
+    summary["Attendance Stats"] = (
+        "✅ "
+        + summary["Present_Count"].astype(str)
+        + "/"
+        + summary["Total_Count"].astype(str)
+        + " Students"
+    )
+
+    display_df = summary.sort_values(by="ts_group", ascending=False)[
+        ["Time", "Subject", "Subject Code", "Attendance Stats"]
+    ]
+
+    c1, c2 = st.columns([2, 1])
+    with c2:
+        st.download_button(
+            "Download Results (CSV, with students details)",
+            data=export_df.to_csv(index=False).encode("utf-8"),
+            file_name="attendance_records.csv",
+            mime="text/csv",
+            type="primary",
+            width="stretch",
+            icon=":material/download:",
+        )
+    st.dataframe(display_df, width="stretch", hide_index=True)
+
 
 def _style_teacher_dashboard():
     st.markdown(
@@ -376,11 +493,6 @@ def teacher_dashboard_screen():
             st.empty()
 
     with records_tab:
-        st.markdown('<div class="section-title">Attendance Records</div>', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.button("View Daily Logs", type="secondary", width="stretch")
-        with c2:
-            st.button("Export Report", type="primary", width="stretch")
+        teacher_tab_attendance_records()
 
     footer_dashboard()
