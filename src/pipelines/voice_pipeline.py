@@ -1,16 +1,33 @@
-from resemblyzer import VoiceEncoder,preprocess_wav
 import numpy as np
 import io
-import librosa
 import streamlit as st
 
 @st.cache_resource
 def load_voice_encoder():
+    try:
+        from resemblyzer import VoiceEncoder  # type: ignore
+    except ModuleNotFoundError as e:
+        st.error(
+            "Voice pipeline dependencies are missing. "
+            "Install `resemblyzer` in the active Python environment."
+        )
+        raise RuntimeError("Missing voice pipeline dependencies") from e
+
     encoder = VoiceEncoder()
     return encoder
 def get_voice_embeddings(audio_bytes):
     try:
         encoder = load_voice_encoder()
+        try:
+            import librosa  # type: ignore
+            from resemblyzer import preprocess_wav  # type: ignore
+        except ModuleNotFoundError as e:
+            st.error(
+                "Voice pipeline dependencies are missing. "
+                "Install `librosa` and `resemblyzer` in the active Python environment."
+            )
+            raise RuntimeError("Missing voice pipeline dependencies") from e
+
         audio, sr = librosa.load(io.BytesIO(audio_bytes), sr=16000)
         wav=preprocess_wav(audio)
         embedding = encoder.embed_utterance(wav)
@@ -37,6 +54,16 @@ def identify_speaker(new_embeddings,candidate_dict,threshold=0.65):
 def process_bulk_audio(audio_bytes,candidate_dict,threshold=0.65):
     try:
         encoder = load_voice_encoder()
+        try:
+            import librosa  # type: ignore
+            from resemblyzer import preprocess_wav  # type: ignore
+        except ModuleNotFoundError as e:
+            st.error(
+                "Voice pipeline dependencies are missing. "
+                "Install `librosa` and `resemblyzer` in the active Python environment."
+            )
+            raise RuntimeError("Missing voice pipeline dependencies") from e
+
         audio, sr = librosa.load(io.BytesIO(audio_bytes), sr=16000)
         segments = librosa.effects.split(audio, top_db=30)
         identified_results = {}
