@@ -77,6 +77,12 @@ def student_login(username: str, password: str):
 
 
 def create_student(new_name, username=None, password=None, face_embedding=None, voice_embedding=None):
+    if face_embedding and isinstance(face_embedding, list) and len(face_embedding) == 1 and isinstance(face_embedding[0], list):
+        face_embedding = face_embedding[0]
+
+    if voice_embedding and isinstance(voice_embedding, list) and len(voice_embedding) == 1 and isinstance(voice_embedding[0], list):
+        voice_embedding = voice_embedding[0]
+
     payload = {
         "name": new_name,
         "face_embedding": face_embedding,
