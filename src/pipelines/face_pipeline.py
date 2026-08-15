@@ -2,8 +2,12 @@ import numpy as np
 import dlib
 import face_recognition_models
 import streamlit as st
-from sklearn.svm import SVC
 from src.database.db import get_all_students
+
+# dlib/face_recognition default same-person cutoff. Keep this so true matches still pass.
+RESEMBLANCE_THRESHOLD = 0.6
+# Reject when best and 2nd-best are too close (ambiguous / likely stranger).
+MIN_MATCH_MARGIN = 0.1
 
 
 def _normalize_embedding(embedding):
@@ -18,6 +22,8 @@ def _normalize_embedding(embedding):
     elif emb.ndim > 1:
         emb = emb.reshape(-1)
 
+    if emb.size == 0:
+        return None
     return emb
 
 
@@ -42,78 +48,80 @@ def get_face_embeddings(image_np):
     return encodings
 
 
-def get_trained_model():
+@st.cache_resource
+def get_face_gallery():
+    """Gallery of enrolled face embeddings for nearest-neighbor matching."""
     students = get_all_students()
     X = []
     y = []
 
     for student in students:
-        embedding = student.get('face_embedding')
-        if embedding:
-            normalized_embedding = _normalize_embedding(embedding)
-            if normalized_embedding is not None and normalized_embedding.size > 0:
-                X.append(normalized_embedding)
-                y.append(student.get('student_id'))
+        normalized_embedding = _normalize_embedding(student.get("face_embedding"))
+        if normalized_embedding is not None:
+            X.append(normalized_embedding)
+            y.append(int(student.get("student_id")))
 
     if len(X) == 0:
-        return None  # ✅ better than 0
-
-    X = np.array(X, dtype=np.float64)
-
-    model = SVC(kernel='linear', probability=True, class_weight='balanced')
-
-    try:
-        model.fit(X, y)
-    except ValueError as e:
-        print(f"Error training face classifier: {e}")
         return None
 
-    # ✅ FIXED DICTIONARY
-    return {"clf": model, "X": X, "y": y}
+    return {"X": np.array(X, dtype=np.float64), "y": y}
+
+
+def get_trained_model():
+    """Backward-compatible alias used by train_classifier / callers."""
+    return get_face_gallery()
 
 
 def train_classifier():
     st.cache_resource.clear()
-    model = get_trained_model()
-    return bool(model)
+    return get_face_gallery() is not None
+
+
+def _match_face(encoding, X_train, y_train):
+    """
+    Nearest-neighbor match with distance + margin checks.
+    Returns student_id or None if unknown / ambiguous.
+    """
+    distances = np.linalg.norm(X_train - encoding, axis=1)
+    best_idx = int(np.argmin(distances))
+    best_dist = float(distances[best_idx])
+
+    if best_dist >= RESEMBLANCE_THRESHOLD:
+        return None
+
+    if len(distances) >= 2:
+        second_dist = float(np.partition(distances, 1)[1])
+        if (second_dist - best_dist) < MIN_MATCH_MARGIN:
+            return None
+
+    return int(y_train[best_idx])
 
 
 def predict_attendance(class_image_np):
     encodings = get_face_embeddings(class_image_np)
     detected_students = {}
 
-    model_data = get_trained_model()
-
-    if not model_data:
+    gallery = get_face_gallery()
+    if not gallery:
         st.warning("No face data available for training. Please ensure students have registered their faces.")
         return detected_students, [], len(encodings)
 
-    # ✅ FIXED ACCESS (dict, not function)
-    clf = model_data['clf']
-    X_train = model_data['X']
-    y_train = model_data['y']
+    X_train = gallery["X"]
+    y_train = gallery["y"]
+    all_students = sorted(set(y_train))
 
-    all_students = sorted(list(set(y_train)))
-
-    if not all_students:  # ✅ safety check
+    if not all_students:
         return detected_students, [], len(encodings)
 
     for encoding in encodings:
         encoding = _normalize_embedding(encoding)
-        if encoding is None or encoding.size == 0:
+        if encoding is None:
+            continue
+        if encoding.shape[0] != X_train.shape[1]:
             continue
 
-        if len(all_students) >= 2:
-            predicted_id = int(clf.predict([encoding])[0])
-        else:
-            predicted_id = int(all_students[0])
-
-        student_embedding = X_train[y_train.index(predicted_id)]
-        best_match_score = np.linalg.norm(student_embedding - encoding)
-
-        resemblance_threshold = 0.6
-
-        if best_match_score < resemblance_threshold:
+        predicted_id = _match_face(encoding, X_train, y_train)
+        if predicted_id is not None:
             detected_students[predicted_id] = True
 
     return detected_students, all_students, len(encodings)
