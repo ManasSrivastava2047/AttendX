@@ -1,5 +1,6 @@
 import streamlit as st
 import base64
+import time
 from pathlib import Path
 
 from src.components.footer import footer_dashboard
@@ -32,7 +33,7 @@ def teacher_screen():
             unsafe_allow_html=True,
         )
     with right_col:
-        if st.button("Go back to Home", type="secondary", shortcut="ctrl+backspace"):
+        if st.button("Go back to Home", type="secondary", shortcut="ctrl+backspace", key="teacher_go_home"):
             st.session_state["login_type"] = None
             st.rerun()
 
@@ -42,7 +43,8 @@ def teacher_screen():
         _teacher_register_layout()
 
     footer_dashboard()
-def login_teacher(username: str, password: str):    
+
+def login_teacher(username: str, password: str):
     teacher_data = teacher_login(username, password)
     if teacher_data:
         st.session_state.teacher_data = teacher_data
@@ -52,30 +54,55 @@ def login_teacher(username: str, password: str):
         st.session_state["login_type"] = "teacher_dashboard"
         return True
     return False
+
 def _teacher_login_layout():
     st.header("Login using password")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    teacher_username=st.text_input("Enter username", placeholder="manassrivastava")
-    teacher_password=st.text_input("Enter password", type="password", placeholder="Enter password")
+    with st.form("teacher_login_form", clear_on_submit=False):
+        teacher_username = st.text_input(
+            "Enter username",
+            placeholder="manassrivastava",
+            key="teacher_login_username",
+        )
+        teacher_password = st.text_input(
+            "Enter password",
+            type="password",
+            placeholder="Enter password",
+            key="teacher_login_password",
+        )
+        st.divider()
+        submitted = st.form_submit_button(
+            "Login",
+            type="secondary",
+            icon=":material/passkey:",
+            width="stretch",
+        )
 
-    st.divider()
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Login", type="secondary", icon=":material/passkey:", width="stretch"):
-            if login_teacher(teacher_username, teacher_password):
-                st.toast("Login successful!")
-                import time
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("Invalid username or password. Please try again.")
-    with c2:
-        if st.button("Register Instead", type="primary", icon=":material/passkey:", width="stretch"):
-            st.session_state.teacher_login_type = "register"
+    if submitted:
+        if login_teacher(teacher_username.strip(), teacher_password):
+            st.toast("Login successful!")
+            time.sleep(1)
             st.rerun()
+        else:
+            st.error("Invalid username or password. Please try again.")
+
+    if st.button(
+        "Register Instead",
+        type="primary",
+        icon=":material/passkey:",
+        width="stretch",
+        key="teacher_goto_register",
+    ):
+        st.session_state.teacher_login_type = "register"
+        st.rerun()
 
 def register_teacher(username: str, name: str, password: str, confirm_password: str):
+    username = (username or "").strip()
+    name = (name or "").strip()
+    password = password or ""
+    confirm_password = confirm_password or ""
+
     if not username or not name or not password or not confirm_password:
         return False, "All fields are required. Please fill in all the details."
     if check_teacher_exists(username):
@@ -86,34 +113,68 @@ def register_teacher(username: str, name: str, password: str, confirm_password: 
     from src.database.db import create_teacher
     try:
         success = create_teacher(username, name, password)
-        return True, "Teacher registered successfully. Please login now."
-
+        if success:
+            return True, "Teacher registered successfully. Please login now."
+        return False, "Username already exists. Please choose a different one."
     except Exception as e:
         return False, f"An error occurred while registering the teacher: {e}"
-    
+
 def _teacher_register_layout():
     st.header("Register your teacher profile")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    teacher_username=st.text_input("Enter username", placeholder="manassrivastava")
-    teacher_name=st.text_input("Enter name", placeholder="Manas Srivastava")
-    teacher_password=st.text_input("Enter password", type="password", placeholder="Enter password")
-    teacher_confirm_password=st.text_input("Confirm your password", type="password", placeholder="Enter password")
+    with st.form("teacher_register_form", clear_on_submit=False):
+        teacher_username = st.text_input(
+            "Enter username",
+            placeholder="manassrivastava",
+            key="teacher_reg_username",
+        )
+        teacher_name = st.text_input(
+            "Enter name",
+            placeholder="Manas Srivastava",
+            key="teacher_reg_name",
+        )
+        teacher_password = st.text_input(
+            "Enter password",
+            type="password",
+            placeholder="Enter password",
+            key="teacher_reg_password",
+        )
+        teacher_confirm_password = st.text_input(
+            "Confirm your password",
+            type="password",
+            placeholder="Enter password",
+            key="teacher_reg_confirm",
+        )
+        st.divider()
+        submitted = st.form_submit_button(
+            "Register now",
+            type="secondary",
+            icon=":material/passkey:",
+            width="stretch",
+        )
 
-    st.divider()
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Register now", type="secondary", icon=":material/passkey:", width="stretch"):
-            success,message=register_teacher(teacher_username, teacher_name, teacher_password, teacher_confirm_password)
-            if success:
-                st.success(message)
-                import time
-                time.sleep(2)
-                st.session_state.teacher_login_type = "login"
-                st.rerun()
-            else:
-                st.error(message)
-    with c2:
-        if st.button("Login Instead", type="primary", icon=":material/passkey:", width="stretch"):
+    if submitted:
+        success, message = register_teacher(
+            teacher_username,
+            teacher_name,
+            teacher_password,
+            teacher_confirm_password,
+        )
+        if success:
+            st.success(message)
+            time.sleep(2)
             st.session_state.teacher_login_type = "login"
             st.rerun()
+        else:
+            st.error(message)
+
+    if st.button(
+        "Login Instead",
+        type="primary",
+        icon=":material/passkey:",
+        width="stretch",
+        key="teacher_goto_login",
+    ):
+        st.session_state.teacher_login_type = "login"
+        st.rerun()
